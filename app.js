@@ -208,6 +208,18 @@ $('signup-form').addEventListener('submit', async (event) => {
   else message('Account created. Check your email to confirm your address, then return here to sign in.', 'success');
 });
 
+$('remove-saved-details-btn').addEventListener('click', () => {
+  $('signin-email').value = '';
+  $('signin-password').value = '';
+  $('signin-email').placeholder = 'name@example.com';
+  $('signin-password').placeholder = 'Enter your password';
+  $('signin-email').setAttribute('autocomplete', 'off');
+  $('signin-password').setAttribute('autocomplete', 'new-password');
+  $('signin-email').blur();
+  $('signin-password').blur();
+  message('Login fields cleared. If your browser fills them again, remove the saved password from your browser password manager.', 'success');
+});
+
 $('forgot-btn').addEventListener('click', async () => {
   const email = $('signin-email').value.trim();
   if (!email) return message('Enter your email address first, then select Forgot password.', 'error');
