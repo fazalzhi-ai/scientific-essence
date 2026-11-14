@@ -93,7 +93,15 @@ function renderManuscripts() {
   }
   list.innerHTML = visibleManuscripts.map(m => `
     <article class="manuscript-item">
-      <div><h3>${safeText(m.title)}</h3><div class="manuscript-meta">Received ${new Date(m.submitted_at).toLocaleDateString()} · Ref. ${safeText(m.id.slice(0,8).toUpperCase())}</div></div>
+      <div class="manuscript-main">
+        <h3>${safeText(m.title)}</h3>
+        <div class="manuscript-meta">Received ${new Date(m.submitted_at).toLocaleDateString()} · Ref. ${safeText(m.id.slice(0,8).toUpperCase())}</div>
+        <details class="manuscript-details">
+          <summary>View abstract</summary>
+          <p>${safeText(m.abstract)}</p>
+          ${m.keywords && m.keywords.length ? `<p><strong>Keywords:</strong> ${safeText(m.keywords.join(', '))}</p>` : ''}
+        </details>
+      </div>
       <span class="status ${safeText(m.status)}">${safeText(labelStatus(m.status))}</span>
     </article>`).join('');
 }
