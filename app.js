@@ -12,6 +12,8 @@ const $ = (id) => document.getElementById(id);
 let currentUser = null;
 let currentProfile = null;
 let visibleManuscripts = [];
+const STORAGE_BUCKET = 'scientific-essence-manuscripts';
+const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
 $('year').textContent = new Date().getFullYear();
 
@@ -91,7 +93,16 @@ function renderManuscripts() {
     list.innerHTML = '<div class="empty-state">No manuscripts are visible to this account yet.</div>';
     return;
   }
-  list.innerHTML = visibleManuscripts.map(m => `
+  list.innerHTML = visibleManuscripts.map(m => {
+    let fileAction = '';
+    if (currentProfile.role === 'author') {
+      fileAction = `<div class="file-actions"><label class="file-label">Upload or add original PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="original" data-manuscript-id="${safeText(m.id)}"></label></div>`;
+    } else if (['admin','editor'].includes(currentProfile.role)) {
+      fileAction = `<div class="file-actions"><label class="file-label">Upload anonymized reviewer PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="blinded" data-manuscript-id="${safeText(m.id)}"></label></div>`;
+    } else if (currentProfile.role === 'reviewer') {
+      fileAction = `<div class="file-actions"><button class="button button-secondary" type="button" data-download-blinded="${safeText(m.id)}">Download blinded PDF</button></div>`;
+    }
+    return `
     <article class="manuscript-item">
       <div class="manuscript-main">
         <h3>${safeText(m.title)}</h3>
@@ -101,11 +112,55 @@ function renderManuscripts() {
           <p>${safeText(m.abstract)}</p>
           ${m.keywords && m.keywords.length ? `<p><strong>Keywords:</strong> ${safeText(m.keywords.join(', '))}</p>` : ''}
         </details>
+        ${fileAction}
       </div>
       <span class="status ${safeText(m.status)}">${safeText(labelStatus(m.status))}</span>
-    </article>`).join('');
+    </article>`;
+  }).join('');
 }
 
+function validatePdf(file) {
+  if (!file) throw new Error('Select a PDF file first.');
+  if (file.size > MAX_PDF_BYTES) throw new Error('The PDF exceeds the 10 MB limit.');
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    throw new Error('Only PDF documents are accepted.');
+  }
+}
+
+async function uploadManuscriptPdf(file, manuscriptId, kind) {
+  validatePdf(file);
+  const safeName = file.name.replace(/[^a-zA-Z0-9._]/g, '_').slice(-100) || 'manuscript.pdf';
+  const folder = kind === 'blinded' ? 'blinded' : 'original';
+  const path = `${folder}/${manuscriptId}/${Date.now()}_${safeName}`;
+  const { error } = await db.storage.from(STORAGE_BUCKET).upload(path, file, {
+    cacheControl: '0',
+    contentType: 'application/pdf',
+    upsert: false
+  });
+  if (error) throw error;
+  return path;
+}
+
+async function downloadBlindedPdf(manuscriptId) {
+  const folder = `blinded/${manuscriptId}`;
+  const { data: files, error: listError } = await db.storage.from(STORAGE_BUCKET).list(folder, {
+    limit: 100,
+    sortBy: { column: 'name', order: 'desc' }
+  });
+  if (listError) throw listError;
+  const pdfs = (files || []).filter(f => f.name && f.name.toLowerCase().endsWith('.pdf'));
+  if (!pdfs.length) throw new Error('The editor has not uploaded the anonymized reviewer PDF yet.');
+  const { data, error } = await db.storage.from(STORAGE_BUCKET).download(`${folder}/${pdfs[0].name}`);
+  if (error) throw error;
+  const url = URL.createObjectURL(data);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = pdfs[0].name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 function setOptions(select, rows, placeholder) {
   select.innerHTML = `<option value="">${placeholder}</option>` + rows.map(r => `<option value="${safeText(r.id)}">${safeText(r.title)}</option>`).join('');
 }
@@ -167,16 +222,26 @@ $('signout-btn').addEventListener('click', async () => {
 });
 
 $('submission-form').addEventListener('submit', async (event) => {
-  event.preventDefault(); busy(true);
+  event.preventDefault();
+  const file = $('manuscript-file').files[0];
+  try { validatePdf(file); } catch (err) { return alert(err.message); }
+  busy(true);
   const title = $('manuscript-title').value.trim();
   const abstract = $('manuscript-abstract').value.trim();
   const keywords = $('manuscript-keywords').value.split(',').map(x => x.trim()).filter(Boolean).slice(0,15);
-  const { error } = await db.from('manuscripts').insert({ author_id: currentUser.id, title, abstract, keywords, status: 'submitted' });
-  busy(false);
-  if (error) return alert(`Submission could not be saved: ${error.message}`);
-  $('submission-form').reset();
-  alert('Your manuscript metadata has been submitted successfully.');
-  await refreshData();
+  const { data: manuscript, error } = await db.from('manuscripts')
+    .insert({ author_id: currentUser.id, title, abstract, keywords, status: 'submitted' })
+    .select('id').single();
+  if (error) { busy(false); return alert(`Submission could not be saved: ${error.message}`); }
+  try {
+    await uploadManuscriptPdf(file, manuscript.id, 'original');
+    $('submission-form').reset();
+    await refreshData();
+    alert('Manuscript details and original PDF submitted successfully.');
+  } catch (uploadError) {
+    alert(`The manuscript record was created, but the PDF upload failed: ${uploadError.message}. Use the original PDF upload control on your manuscript record to retry.`);
+    await refreshData();
+  } finally { busy(false); }
 });
 
 $('status-form').addEventListener('submit', async (event) => {
@@ -205,6 +270,31 @@ $('review-form').addEventListener('submit', async (event) => {
   busy(false);
   if (error) return alert(`Review could not be saved: ${error.message}`);
   $('review-form').reset(); alert('Your review has been recorded.');
+});
+
+$('manuscript-list').addEventListener('change', async (event) => {
+  const input = event.target.closest('input[data-upload-kind]');
+  if (!input || !input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const manuscriptId = input.dataset.manuscriptId;
+  const kind = input.dataset.uploadKind;
+  busy(true);
+  try {
+    await uploadManuscriptPdf(file, manuscriptId, kind);
+    alert(kind === 'blinded' ? 'Anonymized reviewer PDF uploaded successfully.' : 'Original manuscript PDF uploaded successfully.');
+    input.value = '';
+  } catch (err) {
+    alert(`PDF upload failed: ${err.message}`);
+  } finally { busy(false); }
+});
+
+$('manuscript-list').addEventListener('click', async (event) => {
+  const button = event.target.closest('button[data-download-blinded]');
+  if (!button) return;
+  busy(true);
+  try { await downloadBlindedPdf(button.dataset.downloadBlinded); }
+  catch (err) { alert(err.message); }
+  finally { busy(false); }
 });
 
 $('refresh-btn').addEventListener('click', async () => {
