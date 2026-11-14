@@ -311,13 +311,38 @@ $('submission-form').addEventListener('submit', async (event) => {
 });
 
 $('status-form').addEventListener('submit', async (event) => {
-  event.preventDefault(); busy(true);
+  event.preventDefault();
   const id = $('status-manuscript').value;
   const status = $('new-status').value;
-  const { error } = await db.from('manuscripts').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
-  busy(false);
-  if (error) return alert(`Status update failed: ${error.message}`);
-  alert('Editorial status updated.'); await refreshData();
+  if (!id) return alert('Please select the exact manuscript record, including its reference number.');
+  if (!status) return alert('Please select an editorial status.');
+
+  const submitButton = $('status-form').querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  submitButton.textContent = 'Saving decision...';
+  busy(true);
+
+  try {
+    const { data, error } = await db.from('manuscripts')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('id,title,status')
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error('No manuscript record was updated. Check that you are signed in with the Editor account and that the selected manuscript reference is correct.');
+
+    await refreshData();
+    const statusLabel = labelStatus(data.status);
+    alert(`Verified: ${data.title} (Ref. ${data.id.slice(0,8).toUpperCase()}) is now marked as ${statusLabel}.`);
+  } catch (err) {
+    console.error('Editorial status update failed:', err);
+    alert(`Editorial status was not confirmed: ${err.message}`);
+  } finally {
+    busy(false);
+    submitButton.disabled = false;
+    submitButton.innerHTML = 'Save decision <span>→</span>';
+  }
 });
 
 $('assign-form').addEventListener('submit', async (event) => {
