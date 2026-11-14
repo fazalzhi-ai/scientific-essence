@@ -69,8 +69,9 @@
               <label>Manuscript title<input id="manuscript-title" required minlength="5" maxlength="300" placeholder="Enter the full title"></label>
               <label>Abstract<textarea id="manuscript-abstract" required minlength="50" maxlength="10000" rows="5" placeholder="Provide a structured or unstructured abstract"></textarea></label>
               <label>Keywords <small>(separate with commas)</small><input id="manuscript-keywords" placeholder="radiology, imaging, medical science"></label>
+              <label>Original manuscript PDF <small>(PDF only, maximum 10 MB)</small><input id="manuscript-file" type="file" accept="application/pdf,.pdf" required></label>
               <button class="button button-primary" type="submit">Submit manuscript <span>→</span></button>
-              <p class="form-note">This initial portal records manuscript metadata. Secure document upload will be added in the next stage.</p>
+              <p class="form-note">Upload the original manuscript as a PDF. Do not include a blinded reviewer copy here.</p>
             </form>
           </section>
           <section id="review-panel" class="panel hidden">
@@ -96,7 +97,7 @@
               <label>Reviewer user ID<input id="reviewer-id" required placeholder="Paste the reviewer UUID"></label>
               <label>Review due date<input id="review-due" type="date"></label>
               <button class="button button-secondary" type="submit">Create assignment</button>
-              <p class="form-note">Create the reviewer account first, then copy its user ID from Authentication → Users.</p>
+              <p class="form-note">Create the reviewer account first, then copy its user ID from Authentication → Users. After assignment, upload a separate anonymized PDF from the manuscript record below.</p>
             </form>
           </section>
           <section class="panel manuscript-panel">
