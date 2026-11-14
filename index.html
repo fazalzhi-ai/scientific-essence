@@ -1,1 +1,113 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Scientific Essence</title></head><body><h1>Scientific Essence</h1></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102a43">
+  <title>Scientific ESSENCE | Editorial Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="#home" aria-label="Scientific ESSENCE home">
+        <span class="brand-mark">SE</span>
+        <span><strong>Scientific ESSENCE</strong><small>Journal of Medical, Allied Health and Life Sciences</small></span>
+      </a>
+      <div class="topbar-right"><span class="secure-label"><span class="status-dot"></span> Secure editorial workspace</span><button id="signout-btn" class="button button-quiet hidden">Sign out</button></div>
+    </header>
+
+    <main>
+      <section id="auth-view" class="auth-layout">
+        <div class="auth-intro">
+          <p class="eyebrow">EDITORIAL MANAGEMENT SYSTEM</p>
+          <h1>Research deserves<br><em>careful stewardship.</em></h1>
+          <p class="intro-copy">A dedicated workspace for authors, reviewers and the editorial team of Scientific ESSENCE.</p>
+          <div class="feature-list">
+            <div><span class="feature-icon">01</span><span><b>Submit manuscripts</b><small>Send your research for editorial consideration.</small></span></div>
+            <div><span class="feature-icon">02</span><span><b>Coordinate peer review</b><small>Manage assignments and reviewer recommendations.</small></span></div>
+            <div><span class="feature-icon">03</span><span><b>Track decisions</b><small>Follow the editorial status of each submission.</small></span></div>
+          </div>
+        </div>
+        <div class="auth-card">
+          <div class="auth-tabs"><button class="auth-tab active" data-auth-tab="signin">Sign in</button><button class="auth-tab" data-auth-tab="signup">Create account</button></div>
+          <form id="signin-form" class="auth-form">
+            <h2>Welcome back</h2><p class="muted">Sign in to continue to your editorial workspace.</p>
+            <label>Email address<input id="signin-email" type="email" autocomplete="email" required placeholder="name@example.com"></label>
+            <label>Password<input id="signin-password" type="password" autocomplete="current-password" required placeholder="Enter your password"></label>
+            <button class="button button-primary full" type="submit">Sign in <span>→</span></button>
+            <button class="text-button" type="button" id="forgot-btn">Forgot password?</button>
+          </form>
+          <form id="signup-form" class="auth-form hidden">
+            <h2>Create your account</h2><p class="muted">New accounts start with the Author role. Editorial roles are assigned by the journal administrator.</p>
+            <label>Full name<input id="signup-name" type="text" autocomplete="name" required maxlength="120" placeholder="Your full name"></label>
+            <label>Email address<input id="signup-email" type="email" autocomplete="email" required placeholder="name@example.com"></label>
+            <label>Create password<input id="signup-password" type="password" autocomplete="new-password" required minlength="10" placeholder="At least 10 characters"></label>
+            <button class="button button-primary full" type="submit">Create account <span>→</span></button>
+          </form>
+          <div id="auth-message" class="message hidden" role="status" aria-live="polite"></div>
+          <p class="auth-footnote">Access is controlled by secure account permissions. Do not share your password.</p>
+        </div>
+      </section>
+
+      <section id="dashboard-view" class="dashboard hidden">
+        <div class="welcome-row"><div><p class="eyebrow">EDITORIAL WORKSPACE</p><h1 id="welcome-title">Dashboard</h1><p id="welcome-subtitle" class="muted">Your journal activity at a glance.</p></div><span id="role-pill" class="role-pill">AUTHOR</span></div>
+        <div class="stats-grid">
+          <article class="stat-card"><span class="stat-label">Visible manuscripts</span><strong id="stat-total">0</strong><small>Based on your access</small></article>
+          <article class="stat-card"><span class="stat-label">Awaiting action</span><strong id="stat-pending">0</strong><small>Submitted or under review</small></article>
+          <article class="stat-card"><span class="stat-label">Accepted</span><strong id="stat-accepted">0</strong><small>Editorial decision recorded</small></article>
+        </div>
+        <div class="dashboard-grid">
+          <section id="submission-panel" class="panel">
+            <div class="panel-heading"><div><p class="eyebrow">AUTHOR SERVICES</p><h2>Submit a manuscript</h2></div><span class="panel-icon">＋</span></div>
+            <form id="submission-form" class="stack-form">
+              <label>Manuscript title<input id="manuscript-title" required minlength="5" maxlength="300" placeholder="Enter the full title"></label>
+              <label>Abstract<textarea id="manuscript-abstract" required minlength="50" maxlength="10000" rows="5" placeholder="Provide a structured or unstructured abstract"></textarea></label>
+              <label>Keywords <small>(separate with commas)</small><input id="manuscript-keywords" placeholder="radiology, imaging, medical science"></label>
+              <button class="button button-primary" type="submit">Submit manuscript <span>→</span></button>
+              <p class="form-note">This initial portal records manuscript metadata. Secure document upload will be added in the next stage.</p>
+            </form>
+          </section>
+          <section id="review-panel" class="panel hidden">
+            <div class="panel-heading"><div><p class="eyebrow">PEER REVIEW</p><h2>Assigned manuscripts</h2></div><span class="panel-icon">✎</span></div>
+            <form id="review-form" class="stack-form">
+              <label>Assigned manuscript<select id="review-manuscript" required><option value="">Select an assignment</option></select></label>
+              <label>Recommendation<select id="review-recommendation" required><option value="">Choose recommendation</option><option value="accept">Accept</option><option value="minor_revision">Minor revision</option><option value="major_revision">Major revision</option><option value="reject">Reject</option></select></label>
+              <label>Confidential review comments<textarea id="review-comments" rows="5" minlength="20" maxlength="10000" required placeholder="Provide clear, constructive comments"></textarea></label>
+              <button class="button button-primary" type="submit">Submit review <span>→</span></button>
+            </form>
+          </section>
+          <section id="editor-panel" class="panel hidden">
+            <div class="panel-heading"><div><p class="eyebrow">EDITORIAL CONTROL</p><h2>Update manuscript status</h2></div><span class="panel-icon">⌘</span></div>
+            <form id="status-form" class="stack-form">
+              <label>Manuscript<select id="status-manuscript" required><option value="">Select manuscript</option></select></label>
+              <label>Editorial status<select id="new-status" required><option value="submitted">Submitted</option><option value="under_review">Under review</option><option value="revision_requested">Revision requested</option><option value="accepted">Accepted</option><option value="rejected">Rejected</option></select></label>
+              <button class="button button-primary" type="submit">Save decision <span>→</span></button>
+            </form>
+            <div class="assign-divider"></div>
+            <h3>Assign a reviewer</h3>
+            <form id="assign-form" class="stack-form">
+              <label>Manuscript<select id="assign-manuscript" required><option value="">Select manuscript</option></select></label>
+              <label>Reviewer user ID<input id="reviewer-id" required placeholder="Paste the reviewer UUID"></label>
+              <label>Review due date<input id="review-due" type="date"></label>
+              <button class="button button-secondary" type="submit">Create assignment</button>
+              <p class="form-note">Create the reviewer account first, then copy its user ID from Authentication → Users.</p>
+            </form>
+          </section>
+          <section class="panel manuscript-panel">
+            <div class="panel-heading"><div><p class="eyebrow">SUBMISSION RECORD</p><h2>Manuscripts</h2></div><button id="refresh-btn" class="button button-quiet">Refresh ↻</button></div>
+            <div id="manuscript-list" class="manuscript-list"><div class="empty-state">Sign in to load your manuscript records.</div></div>
+          </section>
+        </div>
+      </section>
+    </main>
+    <footer><span>© <span id="year"></span> Scientific ESSENCE</span><span>Published by Radiology Essence</span></footer>
+  </div>
+  <div id="busy-overlay" class="busy-overlay hidden"><div class="spinner"></div><span>Working securely…</span></div>
+</body>
+</html>

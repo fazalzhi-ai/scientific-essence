@@ -1,0 +1,227 @@
+/* Scientific ESSENCE Editorial Portal
+   Browser client uses only the Supabase publishable key.
+   All authorization is enforced by PostgreSQL Row Level Security.
+*/
+const SUPABASE_URL = 'https://ikgcnoekehknvchyjblp.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_qbf4actPXnlDt2ZNRa4zMQ_iOfVRPsV';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+});
+
+const $ = (id) => document.getElementById(id);
+let currentUser = null;
+let currentProfile = null;
+let visibleManuscripts = [];
+
+$('year').textContent = new Date().getFullYear();
+
+function busy(on) { $('busy-overlay').classList.toggle('hidden', !on); }
+function message(text, type = 'success') {
+  const el = $('auth-message');
+  el.textContent = text;
+  el.className = `message ${type}`;
+}
+function clearMessage() { $('auth-message').className = 'message hidden'; $('auth-message').textContent = ''; }
+function safeText(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function labelStatus(status) { return ({under_review:'Under review',revision_requested:'Revision requested',accepted:'Accepted',rejected:'Rejected',submitted:'Submitted',draft:'Draft'})[status] || status; }
+function showAuth(tab = 'signin') {
+  $('auth-view').classList.remove('hidden');
+  $('dashboard-view').classList.add('hidden');
+  $('signout-btn').classList.add('hidden');
+  switchAuthTab(tab);
+}
+function switchAuthTab(tab) {
+  document.querySelectorAll('[data-auth-tab]').forEach(b => b.classList.toggle('active', b.dataset.authTab === tab));
+  $('signin-form').classList.toggle('hidden', tab !== 'signin');
+  $('signup-form').classList.toggle('hidden', tab !== 'signup');
+  clearMessage();
+}
+function showDashboard() {
+  $('auth-view').classList.add('hidden');
+  $('dashboard-view').classList.remove('hidden');
+  $('signout-btn').classList.remove('hidden');
+}
+
+async function loadProfile(user) {
+  const { data, error } = await db.from('profiles').select('id, full_name, role').eq('id', user.id).single();
+  if (error) throw error;
+  return data;
+}
+
+function configureRolePanels(role) {
+  $('submission-panel').classList.toggle('hidden', role !== 'author');
+  $('review-panel').classList.toggle('hidden', role !== 'reviewer');
+  $('editor-panel').classList.toggle('hidden', !['admin','editor'].includes(role));
+  $('role-pill').textContent = role.toUpperCase();
+}
+
+async function enterApp(user) {
+  busy(true);
+  try {
+    currentUser = user;
+    currentProfile = await loadProfile(user);
+    showDashboard();
+    configureRolePanels(currentProfile.role);
+    const name = currentProfile.full_name || user.email || 'User';
+    $('welcome-title').textContent = `Welcome, ${name.split(' ')[0]}`;
+    $('welcome-subtitle').textContent = `You are signed in as ${currentProfile.role}. Your access is controlled by journal permissions.`;
+    await refreshData();
+  } catch (err) {
+    console.error(err);
+    showAuth();
+    message(`Unable to load your profile: ${err.message}. Contact the journal administrator.`, 'error');
+  } finally { busy(false); }
+}
+
+async function refreshData() {
+  const { data, error } = await db.from('manuscripts').select('id, author_id, title, abstract, keywords, status, submitted_at').order('submitted_at', { ascending: false }).limit(100);
+  if (error) throw error;
+  visibleManuscripts = data || [];
+  renderManuscripts();
+  $('stat-total').textContent = visibleManuscripts.length;
+  $('stat-pending').textContent = visibleManuscripts.filter(m => ['submitted','under_review','revision_requested'].includes(m.status)).length;
+  $('stat-accepted').textContent = visibleManuscripts.filter(m => m.status === 'accepted').length;
+  if (currentProfile.role === 'admin' || currentProfile.role === 'editor') populateEditorSelects();
+  if (currentProfile.role === 'reviewer') await populateReviewerSelect();
+}
+
+function renderManuscripts() {
+  const list = $('manuscript-list');
+  if (!visibleManuscripts.length) {
+    list.innerHTML = '<div class="empty-state">No manuscripts are visible to this account yet.</div>';
+    return;
+  }
+  list.innerHTML = visibleManuscripts.map(m => `
+    <article class="manuscript-item">
+      <div><h3>${safeText(m.title)}</h3><div class="manuscript-meta">Received ${new Date(m.submitted_at).toLocaleDateString()} · Ref. ${safeText(m.id.slice(0,8).toUpperCase())}</div></div>
+      <span class="status ${safeText(m.status)}">${safeText(labelStatus(m.status))}</span>
+    </article>`).join('');
+}
+
+function setOptions(select, rows, placeholder) {
+  select.innerHTML = `<option value="">${placeholder}</option>` + rows.map(r => `<option value="${safeText(r.id)}">${safeText(r.title)}</option>`).join('');
+}
+function populateEditorSelects() {
+  const options = visibleManuscripts.map(m => ({id:m.id,title:m.title}));
+  setOptions($('status-manuscript'), options, 'Select manuscript');
+  setOptions($('assign-manuscript'), options, 'Select manuscript');
+}
+async function populateReviewerSelect() {
+  const { data, error } = await db.from('reviewer_assignments').select('manuscript_id, manuscripts(id,title)').eq('reviewer_id', currentUser.id);
+  if (error) throw error;
+  const rows = (data || []).map(x => x.manuscripts).filter(Boolean);
+  setOptions($('review-manuscript'), rows, 'Select an assignment');
+}
+
+for (const tab of document.querySelectorAll('[data-auth-tab]')) tab.addEventListener('click', () => switchAuthTab(tab.dataset.authTab));
+
+$('signin-form').addEventListener('submit', async (event) => {
+  event.preventDefault(); clearMessage(); busy(true);
+  const email = $('signin-email').value.trim();
+  const password = $('signin-password').value;
+  const { data, error } = await db.auth.signInWithPassword({ email, password });
+  busy(false);
+  if (error) return message(error.message, 'error');
+  await enterApp(data.user);
+});
+
+$('signup-form').addEventListener('submit', async (event) => {
+  event.preventDefault(); clearMessage(); busy(true);
+  const fullName = $('signup-name').value.trim();
+  const email = $('signup-email').value.trim();
+  const password = $('signup-password').value;
+  const { data, error } = await db.auth.signUp({
+    email, password,
+    options: { data: { full_name: fullName }, emailRedirectTo: window.location.href.split('#')[0] }
+  });
+  busy(false);
+  if (error) return message(error.message, 'error');
+  if (data.session) await enterApp(data.user);
+  else message('Account created. Check your email to confirm your address, then return here to sign in.', 'success');
+});
+
+$('forgot-btn').addEventListener('click', async () => {
+  const email = $('signin-email').value.trim();
+  if (!email) return message('Enter your email address first, then select Forgot password.', 'error');
+  busy(true);
+  const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo: window.location.href.split('#')[0] });
+  busy(false);
+  message(error ? error.message : 'If the account exists, a password recovery email has been sent.', error ? 'error' : 'success');
+});
+
+$('signout-btn').addEventListener('click', async () => {
+  busy(true);
+  const { error } = await db.auth.signOut();
+  busy(false);
+  if (error) return alert(error.message);
+  currentUser = null; currentProfile = null; visibleManuscripts = [];
+  showAuth();
+});
+
+$('submission-form').addEventListener('submit', async (event) => {
+  event.preventDefault(); busy(true);
+  const title = $('manuscript-title').value.trim();
+  const abstract = $('manuscript-abstract').value.trim();
+  const keywords = $('manuscript-keywords').value.split(',').map(x => x.trim()).filter(Boolean).slice(0,15);
+  const { error } = await db.from('manuscripts').insert({ author_id: currentUser.id, title, abstract, keywords, status: 'submitted' });
+  busy(false);
+  if (error) return alert(`Submission could not be saved: ${error.message}`);
+  $('submission-form').reset();
+  alert('Your manuscript metadata has been submitted successfully.');
+  await refreshData();
+});
+
+$('status-form').addEventListener('submit', async (event) => {
+  event.preventDefault(); busy(true);
+  const id = $('status-manuscript').value;
+  const status = $('new-status').value;
+  const { error } = await db.from('manuscripts').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+  busy(false);
+  if (error) return alert(`Status update failed: ${error.message}`);
+  alert('Editorial status updated.'); await refreshData();
+});
+
+$('assign-form').addEventListener('submit', async (event) => {
+  event.preventDefault(); busy(true);
+  const row = { manuscript_id: $('assign-manuscript').value, reviewer_id: $('reviewer-id').value.trim(), assigned_by: currentUser.id, due_at: $('review-due').value || null };
+  const { error } = await db.from('reviewer_assignments').insert(row);
+  busy(false);
+  if (error) return alert(`Reviewer assignment failed: ${error.message}`);
+  $('assign-form').reset(); alert('Reviewer assignment created.');
+});
+
+$('review-form').addEventListener('submit', async (event) => {
+  event.preventDefault(); busy(true);
+  const row = { manuscript_id: $('review-manuscript').value, reviewer_id: currentUser.id, recommendation: $('review-recommendation').value, comments: $('review-comments').value.trim() };
+  const { error } = await db.from('reviews').upsert(row, { onConflict: 'manuscript_id,reviewer_id' });
+  busy(false);
+  if (error) return alert(`Review could not be saved: ${error.message}`);
+  $('review-form').reset(); alert('Your review has been recorded.');
+});
+
+$('refresh-btn').addEventListener('click', async () => {
+  busy(true);
+  try { await refreshData(); } catch (err) { alert(err.message); }
+  finally { busy(false); }
+});
+
+// Password recovery links return to this page with a recovery session.
+db.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    const newPassword = prompt('Enter a new password with at least 10 characters:');
+    if (newPassword && newPassword.length >= 10) {
+      const { error } = await db.auth.updateUser({ password: newPassword });
+      alert(error ? error.message : 'Password updated. Please sign in again.');
+      await db.auth.signOut(); showAuth();
+    } else if (newPassword !== null) alert('Password must contain at least 10 characters.');
+  }
+  if (event === 'SIGNED_OUT') showAuth();
+});
+
+(async function init() {
+  busy(true);
+  const { data: { session } } = await db.auth.getSession();
+  if (session?.user) await enterApp(session.user);
+  else showAuth();
+  busy(false);
+})();
