@@ -26,6 +26,11 @@ function message(text, type = 'success') {
 function clearMessage() { $('auth-message').className = 'message hidden'; $('auth-message').textContent = ''; }
 function safeText(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function labelStatus(status) { return ({under_review:'Under review',revision_requested:'Revision requested',accepted:'Accepted',rejected:'Rejected',submitted:'Submitted',draft:'Draft'})[status] || status; }
+function clearLoginFields() {
+  $('signin-email').value = '';
+  $('signin-password').value = '';
+}
+
 function showAuth(tab = 'signin') {
   $('auth-view').classList.remove('hidden');
   $('dashboard-view').classList.add('hidden');
@@ -218,6 +223,7 @@ $('signout-btn').addEventListener('click', async () => {
   busy(false);
   if (error) return alert(error.message);
   currentUser = null; currentProfile = null; visibleManuscripts = [];
+  clearLoginFields();
   showAuth();
 });
 
