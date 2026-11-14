@@ -84,6 +84,22 @@ async function refreshData() {
   const { data, error } = await db.from('manuscripts').select('id, author_id, title, abstract, keywords, status, submitted_at').order('submitted_at', { ascending: false }).limit(100);
   if (error) throw error;
   visibleManuscripts = data || [];
+
+  if (['admin','editor'].includes(currentProfile.role)) {
+    const { data: reviews, error: reviewError } = await db.from('reviews')
+      .select('manuscript_id, recommendation, comments, submitted_at')
+      .order('submitted_at', { ascending: false });
+    if (reviewError) throw reviewError;
+    const latestReviewByManuscript = new Map();
+    (reviews || []).forEach(review => {
+      if (!latestReviewByManuscript.has(review.manuscript_id)) latestReviewByManuscript.set(review.manuscript_id, review);
+    });
+    visibleManuscripts = visibleManuscripts.map(m => ({
+      ...m,
+      reviewerReview: latestReviewByManuscript.get(m.id) || null
+    }));
+  }
+
   renderManuscripts();
   $('stat-total').textContent = visibleManuscripts.length;
   $('stat-pending').textContent = visibleManuscripts.filter(m => ['submitted','under_review','revision_requested'].includes(m.status)).length;
@@ -112,6 +128,9 @@ function renderManuscripts() {
       <div class="manuscript-main">
         <h3>${safeText(m.title)}</h3>
         <div class="manuscript-meta">Received ${new Date(m.submitted_at).toLocaleDateString()} · Ref. ${safeText(m.id.slice(0,8).toUpperCase())}</div>
+        ${['admin','editor'].includes(currentProfile.role) ? (m.reviewerReview
+          ? `<div class="review-summary"><strong>Reviewer recommendation: ${safeText(({accept:'Accept',minor_revision:'Minor revision',major_revision:'Major revision',reject:'Reject'})[m.reviewerReview.recommendation] || m.reviewerReview.recommendation)}</strong><p>${safeText(m.reviewerReview.comments)}</p><small>Review received ${new Date(m.reviewerReview.submitted_at).toLocaleString()}</small></div>`
+          : '<div class="review-summary"><strong>Reviewer recommendation: Not submitted yet</strong></div>') : ''}
         <details class="manuscript-details">
           <summary>View abstract</summary>
           <p>${safeText(m.abstract)}</p>
@@ -167,17 +186,25 @@ async function downloadBlindedPdf(manuscriptId) {
   URL.revokeObjectURL(url);
 }
 function setOptions(select, rows, placeholder) {
-  select.innerHTML = `<option value="">${placeholder}</option>` + rows.map(r => `<option value="${safeText(r.id)}">${safeText(r.title)}</option>`).join('');
+  select.innerHTML = `<option value="">${placeholder}</option>` + rows.map(r => `<option value="${safeText(r.id)}">${safeText(r.label || r.title)}</option>`).join('');
+}
+function manuscriptOptionLabel(m) {
+  const date = m.submitted_at ? new Date(m.submitted_at).toLocaleDateString() : '';
+  const ref = m.id ? m.id.slice(0,8).toUpperCase() : '';
+  return `${m.title}${ref ? ' | Ref. ' + ref : ''}${date ? ' | ' + date : ''}`;
 }
 function populateEditorSelects() {
-  const options = visibleManuscripts.map(m => ({id:m.id,title:m.title}));
+  const options = visibleManuscripts.map(m => ({id:m.id,title:m.title,label:manuscriptOptionLabel(m)}));
   setOptions($('status-manuscript'), options, 'Select manuscript');
   setOptions($('assign-manuscript'), options, 'Select manuscript');
 }
 async function populateReviewerSelect() {
-  const { data, error } = await db.from('reviewer_assignments').select('manuscript_id, manuscripts(id,title)').eq('reviewer_id', currentUser.id);
+  const { data, error } = await db.from('reviewer_assignments')
+    .select('manuscript_id, manuscripts(id,title,submitted_at)')
+    .eq('reviewer_id', currentUser.id);
   if (error) throw error;
-  const rows = (data || []).map(x => x.manuscripts).filter(Boolean);
+  const rows = (data || []).map(x => x.manuscripts).filter(Boolean)
+    .map(m => ({...m, label:manuscriptOptionLabel(m)}));
   setOptions($('review-manuscript'), rows, 'Select an assignment');
 }
 
