@@ -208,17 +208,38 @@ $('signup-form').addEventListener('submit', async (event) => {
   else message('Account created. Check your email to confirm your address, then return here to sign in.', 'success');
 });
 
-$('remove-saved-details-btn').addEventListener('click', () => {
-  $('signin-email').value = '';
-  $('signin-password').value = '';
-  $('signin-email').placeholder = 'name@example.com';
-  $('signin-password').placeholder = 'Enter your password';
-  $('signin-email').setAttribute('autocomplete', 'off');
-  $('signin-password').setAttribute('autocomplete', 'new-password');
-  $('signin-email').blur();
-  $('signin-password').blur();
-  message('Login fields cleared. If your browser fills them again, remove the saved password from your browser password manager.', 'success');
+$('remove-saved-details-btn').addEventListener('click', (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  const emailField = $('signin-email');
+  const passwordField = $('signin-password');
+
+  emailField.value = '';
+  passwordField.value = '';
+  emailField.placeholder = 'name@example.com';
+  passwordField.placeholder = 'Enter your password';
+
+  emailField.setAttribute('autocomplete', 'off');
+  passwordField.setAttribute('autocomplete', 'new-password');
+  emailField.setAttribute('readonly', 'readonly');
+  passwordField.setAttribute('readonly', 'readonly');
+
+  emailField.blur();
+  passwordField.blur();
+
+  window.setTimeout(() => {
+    emailField.value = '';
+    passwordField.value = '';
+  }, 100);
+
+  message('The visible login details have been cleared. Browser saved passwords must be removed separately in Chrome or Edge Password Manager.', 'success');
 });
+
+for (const id of ['signin-email', 'signin-password']) {
+  $(id).addEventListener('focus', () => {
+    $(id).removeAttribute('readonly');
+  }, { once: true });
+}
 
 $('forgot-btn').addEventListener('click', async () => {
   const email = $('signin-email').value.trim();
