@@ -303,12 +303,40 @@ $('assign-form').addEventListener('submit', async (event) => {
 });
 
 $('review-form').addEventListener('submit', async (event) => {
-  event.preventDefault(); busy(true);
-  const row = { manuscript_id: $('review-manuscript').value, reviewer_id: currentUser.id, recommendation: $('review-recommendation').value, comments: $('review-comments').value.trim() };
-  const { error } = await db.from('reviews').upsert(row, { onConflict: 'manuscript_id,reviewer_id' });
-  busy(false);
-  if (error) return alert(`Review could not be saved: ${error.message}`);
-  $('review-form').reset(); alert('Your review has been recorded.');
+  event.preventDefault();
+  const manuscriptId = $('review-manuscript').value;
+  const recommendation = $('review-recommendation').value;
+  const comments = $('review-comments').value.trim();
+
+  if (!manuscriptId) return alert('Please select your assigned manuscript.');
+  if (!recommendation) return alert('Please choose a recommendation.');
+  if (comments.length < 20) return alert('Please enter review comments of at least 20 characters.');
+
+  const submitButton = $('review-form').querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  submitButton.textContent = 'Submitting recommendation...';
+  busy(true);
+
+  try {
+    const row = {
+      manuscript_id: manuscriptId,
+      reviewer_id: currentUser.id,
+      recommendation,
+      comments
+    };
+    const { error } = await db.from('reviews').upsert(row, { onConflict: 'manuscript_id,reviewer_id' });
+    if (error) throw error;
+
+    $('review-form').reset();
+    alert('Your recommendation and review comments have been saved for editorial consideration. The editor will make the final manuscript decision.');
+  } catch (err) {
+    console.error('Review submission failed:', err);
+    alert(`Review could not be saved: ${err.message}`);
+  } finally {
+    busy(false);
+    submitButton.disabled = false;
+    submitButton.innerHTML = 'Submit recommendation <span>→</span>';
+  }
 });
 
 $('manuscript-list').addEventListener('change', async (event) => {
