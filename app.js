@@ -120,9 +120,8 @@ function renderManuscripts() {
       fileAction = `<div class="file-actions"><label class="file-label">Upload or add original PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="original" data-manuscript-id="${safeText(m.id)}"></label></div>`;
     } else if (['admin','editor'].includes(currentProfile.role)) {
       fileAction = `<div class="file-actions"><label class="file-label">Upload anonymized reviewer PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="blinded" data-manuscript-id="${safeText(m.id)}"></label></div>`;
-      if (m.status === 'rejected') {
-        fileAction += `<div class="file-actions"><button class="button button-secondary" type="button" data-delete-pdfs="original" data-manuscript-id="${safeText(m.id)}">Delete original PDF</button><button class="button button-secondary" type="button" data-delete-pdfs="blinded" data-manuscript-id="${safeText(m.id)}">Delete reviewer PDF</button></div><p class="form-note">These permanent file deletion controls are available only for rejected manuscripts. The abstract and review history are retained.</p>`;
-      }
+      const rejected = m.status === 'rejected';
+      fileAction += `<div class="file-actions"><button class="button button-secondary" type="button" data-delete-pdfs="original" data-manuscript-id="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete original PDF</button><button class="button button-secondary" type="button" data-delete-pdfs="blinded" data-manuscript-id="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete reviewer PDF</button></div><p class="form-note">${rejected ? 'This manuscript is rejected. You may permanently delete its PDF files. Its abstract and review history will remain.' : 'PDF deletion becomes available after the manuscript status is changed to Rejected.'}</p>`;
     } else if (currentProfile.role === 'reviewer') {
       fileAction = `<div class="file-actions"><button class="button button-secondary" type="button" data-download-blinded="${safeText(m.id)}">Download blinded PDF</button></div>`;
     }
