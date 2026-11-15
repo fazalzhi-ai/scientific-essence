@@ -312,7 +312,7 @@ $('submission-form').addEventListener('submit', async (event) => {
     });
     if (emailError) {
       console.error('Submission confirmation email failed:', emailError);
-      emailNotice = '\\n\\nYour submission was received, but the confirmation email could not be sent. Please contact the editorial office.';
+      emailNotice = '\n\nYour submission was received, but the confirmation email could not be sent. Please contact the editorial office.';
     }
     alert('Manuscript details and original PDF submitted successfully.' + emailNotice);
   } catch (uploadError) {
