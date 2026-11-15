@@ -291,6 +291,7 @@ $('signout-btn').addEventListener('click', async () => {
 
 $('submission-form').addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (!$('author-guidelines-confirm').checked) return alert('Please confirm that you have read and followed the manuscript preparation guidelines.');
   const file = $('manuscript-file').files[0];
   try { validatePdf(file); } catch (err) { return alert(err.message); }
   busy(true);
@@ -305,7 +306,15 @@ $('submission-form').addEventListener('submit', async (event) => {
     await uploadManuscriptPdf(file, manuscript.id, 'original');
     $('submission-form').reset();
     await refreshData();
-    alert('Manuscript details and original PDF submitted successfully.');
+    let emailNotice = '';
+    const { error: emailError } = await db.functions.invoke('author-submission-confirmation', {
+      body: { manuscript_id: manuscript.id }
+    });
+    if (emailError) {
+      console.error('Submission confirmation email failed:', emailError);
+      emailNotice = '\\n\\nYour submission was received, but the confirmation email could not be sent. Please contact the editorial office.';
+    }
+    alert('Manuscript details and original PDF submitted successfully.' + emailNotice);
   } catch (uploadError) {
     alert(`The manuscript record was created, but the PDF upload failed: ${uploadError.message}. Use the original PDF upload control on your manuscript record to retry.`);
     await refreshData();
