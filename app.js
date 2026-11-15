@@ -121,7 +121,7 @@ function renderManuscripts() {
     } else if (['admin','editor'].includes(currentProfile.role)) {
       fileAction = `<div class="file-actions"><label class="file-label">Upload anonymized reviewer PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="blinded" data-manuscript-id="${safeText(m.id)}"></label></div>`;
       const rejected = m.status === 'rejected';
-      fileAction += `<div class="file-actions"><button class="button button-secondary" type="button" data-delete-pdfs="original" data-manuscript-id="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete original PDF</button><button class="button button-secondary" type="button" data-delete-pdfs="blinded" data-manuscript-id="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete reviewer PDF</button></div><p class="form-note">${rejected ? 'This manuscript is rejected. You may permanently delete its PDF files. Its abstract and review history will remain.' : 'PDF deletion becomes available after the manuscript status is changed to Rejected.'}</p>`;
+      fileAction += `<div class="file-actions"><button class="button button-secondary" type="button" data-delete-pdfs="original" data-manuscript-id="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete original PDF</button><button class="button button-secondary" type="button" data-delete-pdfs="blinded" data-manuscript-id="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete reviewer PDF</button><button class="button button-secondary" type="button" data-delete-manuscript="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete rejected manuscript</button></div><p class="form-note">${rejected ? 'You may delete either PDF separately, or permanently delete this rejected manuscript including its abstract, keywords, reviewer assignments and review history.' : 'Deletion controls become available after the manuscript status is changed to Rejected.'}</p>`;
     } else if (currentProfile.role === 'reviewer') {
       fileAction = `<div class="file-actions"><button class="button button-secondary" type="button" data-download-blinded="${safeText(m.id)}">Download blinded PDF</button></div>`;
     }
@@ -410,6 +410,48 @@ $('manuscript-list').addEventListener('change', async (event) => {
 });
 
 $('manuscript-list').addEventListener('click', async (event) => {
+  const manuscriptDeleteButton = event.target.closest('button[data-delete-manuscript]');
+  if (manuscriptDeleteButton) {
+    const manuscriptId = manuscriptDeleteButton.dataset.deleteManuscript;
+    const manuscript = visibleManuscripts.find(m => m.id === manuscriptId);
+    if (!manuscript || manuscript.status !== 'rejected') {
+      alert('Only rejected manuscripts can be permanently deleted.');
+      return;
+    }
+    const reference = manuscript.id.slice(0,8).toUpperCase();
+    const confirmed = confirm(`PERMANENT DELETION\n\nDelete "${manuscript.title}" (Ref. ${reference})?\n\nThis removes both PDF files, the manuscript record, abstract, keywords, reviewer assignments and all review comments and recommendations.\n\nThis action cannot be undone.`);
+    if (!confirmed) return;
+    busy(true);
+    try {
+      const folders = [`original/${manuscriptId}`, `blinded/${manuscriptId}`];
+      const paths = [];
+      for (const folder of folders) {
+        const { data: files, error: listError } = await db.storage.from(STORAGE_BUCKET).list(folder, { limit: 100 });
+        if (listError) throw listError;
+        (files || []).filter(f => f.name && f.name.toLowerCase().endsWith('.pdf'))
+          .forEach(f => paths.push(`${folder}/${f.name}`));
+      }
+      if (paths.length) {
+        const { error: storageError } = await db.storage.from(STORAGE_BUCKET).remove(paths);
+        if (storageError) throw storageError;
+      }
+      const { data, error } = await db.from('manuscripts')
+        .delete()
+        .eq('id', manuscriptId)
+        .eq('status', 'rejected')
+        .select('id,title')
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error('The manuscript record was not deleted. Confirm that it is still rejected and that your account has Editor permissions.');
+      await refreshData();
+      alert(`Permanently deleted ${data.title} (Ref. ${reference}), including its PDFs, abstract, keywords and reviewer history.`);
+    } catch (err) {
+      console.error('Manuscript deletion failed:', err);
+      alert(`Manuscript deletion failed: ${err.message}`);
+    } finally { busy(false); }
+    return;
+  }
+
   const deleteButton = event.target.closest('button[data-delete-pdfs]');
   if (deleteButton) {
     const manuscriptId = deleteButton.dataset.manuscriptId;
