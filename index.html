@@ -131,10 +131,19 @@
             <h3>Assign a reviewer</h3>
             <form id="assign-form" class="stack-form">
               <label>Manuscript<select id="assign-manuscript" required><option value="">Select manuscript</option></select></label>
-              <label>Reviewer user ID<input id="reviewer-id" required placeholder="Paste the reviewer UUID"></label>
+              <label>Reviewer<select id="reviewer-id" required><option value="">Search and select an approved reviewer</option></select></label>
               <label>Review due date<input id="review-due" type="date"></label>
               <button class="button button-secondary" type="submit">Create assignment</button>
-              <p class="form-note">Create the reviewer account first, then copy its user ID from Authentication → Users. After assignment, upload a separate anonymized PDF from the manuscript record below.</p>
+              <p class="form-note">Only accounts with the Reviewer role appear here. Upload a separate anonymized PDF from the manuscript record below.</p>
+            </form>
+            <div class="assign-divider"></div>
+            <h3>User Management</h3>
+            <p class="form-note">Find an existing registered account by its exact email address. Granting Reviewer access does not remove the Author role.</p>
+            <form id="user-search-form" class="stack-form">
+              <label>Registered email address<input id="user-search-email" type="email" required placeholder="name@example.com"></label>
+              <button class="button button-secondary" type="submit">Search account</button>
+            </form>
+            <div id="user-search-result" class="user-search-result" aria-live="polite"></div>
             </form>
           </section>
           <section class="panel manuscript-panel">
