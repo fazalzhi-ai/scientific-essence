@@ -138,7 +138,7 @@ function renderManuscripts() {
       <div class="manuscript-main">
         <h3>${safeText(m.title)}</h3>
         <div class="manuscript-meta">Received ${new Date(m.submitted_at).toLocaleDateString()} · Ref. ${safeText(m.id.slice(0,8).toUpperCase())}</div>
-        ${['admin','editor'].includes(currentProfile.role) ? `<div class="review-summary"><strong>Author contact details</strong><p>Email: <a href="mailto:${safeText(m.authorContact?.author_email || '')}">${safeText(m.authorContact?.author_email || 'Not available')}</a></p><p>WhatsApp: ${m.authorContact?.whatsapp_number ? `<a href="https://wa.me/${safeText(m.authorContact.whatsapp_number.replace(/\\D/g, ''))}" target="_blank" rel="noopener noreferrer">${safeText(m.authorContact.whatsapp_number)}</a>` : 'Not provided'}</p></div>` : ''}
+        ${['admin','editor'].includes(currentProfile.role) ? `<div class="review-summary"><strong>Author contact details</strong><p>Email: <a href="mailto:${safeText(m.authorContact?.author_email || '')}">${safeText(m.authorContact?.author_email || 'Not available')}</a></p><p>WhatsApp: ${m.authorContact?.whatsapp_number ? `<a href="https://wa.me/${safeText(m.authorContact.whatsapp_number.replace(/\D/g, ''))}" target="_blank" rel="noopener noreferrer">${safeText(m.authorContact.whatsapp_number)}</a>` : 'Not provided'}</p></div>` : ''}
         ${['admin','editor'].includes(currentProfile.role) ? (m.reviewerReview
           ? `<div class="review-summary"><strong>Reviewer recommendation: ${safeText(({accept:'Accept',minor_revision:'Minor revision',major_revision:'Major revision',reject:'Reject'})[m.reviewerReview.recommendation] || m.reviewerReview.recommendation)}</strong><p>${safeText(m.reviewerReview.comments)}</p><small>Review received ${new Date(m.reviewerReview.submitted_at).toLocaleString()}</small></div>`
           : '<div class="review-summary"><strong>Reviewer recommendation: Not submitted yet</strong></div>') : ''}
@@ -329,7 +329,7 @@ $('submission-form').addEventListener('submit', async (event) => {
   const abstract = $('manuscript-abstract').value.trim();
   const keywords = $('manuscript-keywords').value.split(',').map(x => x.trim()).filter(Boolean).slice(0,15);
   const whatsapp = $('author-whatsapp').value.trim();
-  const whatsappDigits = whatsapp.replace(/\\D/g, '');
+  const whatsappDigits = whatsapp.replace(/\D/g, '');
   if (whatsapp && (whatsappDigits.length < 7 || whatsappDigits.length > 15)) {
     busy(false);
     return alert('Enter a valid WhatsApp number with country code, or leave this optional field blank.');
