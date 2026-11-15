@@ -81,7 +81,7 @@ async function enterApp(user) {
 }
 
 async function refreshData() {
-  const { data, error } = await db.from('manuscripts').select('id, author_id, title, abstract, keywords, status, submitted_at').order('submitted_at', { ascending: false }).limit(100);
+  const { data, error } = await db.from('manuscripts').select('id, author_id, title, article_type, abstract, keywords, status, submitted_at').order('submitted_at', { ascending: false }).limit(100);
   if (error) throw error;
   visibleManuscripts = data || [];
 
@@ -137,7 +137,7 @@ function renderManuscripts() {
     <article class="manuscript-item">
       <div class="manuscript-main">
         <h3>${safeText(m.title)}</h3>
-        <div class="manuscript-meta">Received ${new Date(m.submitted_at).toLocaleDateString()} · Ref. ${safeText(m.id.slice(0,8).toUpperCase())}</div>
+        <div class="manuscript-meta">Article type: <strong>${safeText(m.article_type || 'Not specified')}</strong> · Received ${new Date(m.submitted_at).toLocaleDateString()} · Ref. ${safeText(m.id.slice(0,8).toUpperCase())}</div>
         ${['admin','editor'].includes(currentProfile.role) ? `<div class="review-summary"><strong>Author contact details</strong><p>Email: <a href="mailto:${safeText(m.authorContact?.author_email || '')}">${safeText(m.authorContact?.author_email || 'Not available')}</a></p><p>WhatsApp: ${m.authorContact?.whatsapp_number ? `<a href="https://wa.me/${safeText(m.authorContact.whatsapp_number.replace(/\D/g, ''))}" target="_blank" rel="noopener noreferrer">${safeText(m.authorContact.whatsapp_number)}</a>` : 'Not provided'}</p></div>` : ''}
         ${['admin','editor'].includes(currentProfile.role) ? (m.reviewerReview
           ? `<div class="review-summary"><strong>Reviewer recommendation: ${safeText(({accept:'Accept',minor_revision:'Minor revision',major_revision:'Major revision',reject:'Reject'})[m.reviewerReview.recommendation] || m.reviewerReview.recommendation)}</strong><p>${safeText(m.reviewerReview.comments)}</p><small>Review received ${new Date(m.reviewerReview.submitted_at).toLocaleString()}</small></div>`
@@ -335,7 +335,7 @@ $('submission-form').addEventListener('submit', async (event) => {
     return alert('Enter a valid WhatsApp number with country code, or leave this optional field blank.');
   }
   const { data: manuscript, error } = await db.from('manuscripts')
-    .insert({ author_id: currentUser.id, title, abstract, keywords, status: 'submitted' })
+    .insert({ author_id: currentUser.id, title, article_type: $('manuscript-article-type').value, abstract, keywords, status: 'submitted' })
     .select('id').single();
   if (error) { busy(false); return alert(`Submission could not be saved: ${error.message}`); }
   const { error: contactError } = await db.from('manuscript_contacts').insert({
