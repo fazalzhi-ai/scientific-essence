@@ -50,16 +50,26 @@ function showDashboard() {
 }
 
 async function loadProfile(user) {
-  const { data, error } = await db.from('profiles').select('id, full_name, role').eq('id', user.id).single();
+  const [{ data: profile, error }, { data: roleRows, error: roleError }] = await Promise.all([
+    db.from('profiles').select('id, full_name, role').eq('id', user.id).single(),
+    db.from('user_roles').select('role').eq('user_id', user.id)
+  ]);
   if (error) throw error;
-  return data;
+  if (roleError) throw roleError;
+  const roles = new Set((roleRows || []).map(row => row.role));
+  if (profile.role) roles.add(profile.role);
+  return { ...profile, roles: [...roles] };
 }
 
-function configureRolePanels(role) {
-  $('submission-panel').classList.toggle('hidden', role !== 'author');
-  $('review-panel').classList.toggle('hidden', role !== 'reviewer');
-  $('editor-panel').classList.toggle('hidden', !['admin','editor'].includes(role));
-  $('role-pill').textContent = role.toUpperCase();
+function hasRole(role) {
+  return Boolean(currentProfile && (currentProfile.roles || [currentProfile.role]).includes(role));
+}
+
+function configureRolePanels(roles) {
+  $('submission-panel').classList.toggle('hidden', !roles.includes('author'));
+  $('review-panel').classList.toggle('hidden', !roles.includes('reviewer'));
+  $('editor-panel').classList.toggle('hidden', !roles.includes('admin') && !roles.includes('editor'));
+  $('role-pill').textContent = roles.map(role => role.toUpperCase()).join(' + ');
 }
 
 async function enterApp(user) {
@@ -68,10 +78,10 @@ async function enterApp(user) {
     currentUser = user;
     currentProfile = await loadProfile(user);
     showDashboard();
-    configureRolePanels(currentProfile.role);
+    configureRolePanels(currentProfile.roles);
     const name = currentProfile.full_name || user.email || 'User';
     $('welcome-title').textContent = `Welcome, ${name.split(' ')[0]}`;
-    $('welcome-subtitle').textContent = `You are signed in as ${currentProfile.role}. Your access is controlled by journal permissions.`;
+    $('welcome-subtitle').textContent = `Your roles: ${currentProfile.roles.join(', ')}. Your access is controlled by journal permissions.`;
     await refreshData();
   } catch (err) {
     console.error(err);
@@ -85,7 +95,7 @@ async function refreshData() {
   if (error) throw error;
   visibleManuscripts = data || [];
 
-  if (['admin','editor'].includes(currentProfile.role)) {
+  if ((hasRole('admin') || hasRole('editor'))) {
     const { data: contacts, error: contactError } = await db.from('manuscript_contacts')
       .select('manuscript_id, author_email, whatsapp_number');
     if (contactError) throw contactError;
@@ -112,8 +122,8 @@ async function refreshData() {
   $('stat-total').textContent = visibleManuscripts.length;
   $('stat-pending').textContent = visibleManuscripts.filter(m => ['submitted','under_review','revision_requested'].includes(m.status)).length;
   $('stat-accepted').textContent = visibleManuscripts.filter(m => m.status === 'accepted').length;
-  if (currentProfile.role === 'admin' || currentProfile.role === 'editor') populateEditorSelects();
-  if (currentProfile.role === 'reviewer') await populateReviewerSelect();
+  if ((hasRole('admin') || hasRole('editor'))) populateEditorSelects();
+  if (hasRole('reviewer')) await populateReviewerSelect();
 }
 
 function renderManuscripts() {
@@ -124,13 +134,13 @@ function renderManuscripts() {
   }
   list.innerHTML = visibleManuscripts.map(m => {
     let fileAction = '';
-    if (currentProfile.role === 'author') {
+    if (hasRole('author')) {
       fileAction = `<div class="file-actions"><label class="file-label">Upload or add original PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="original" data-manuscript-id="${safeText(m.id)}"></label></div>`;
-    } else if (['admin','editor'].includes(currentProfile.role)) {
+    } else if ((hasRole('admin') || hasRole('editor'))) {
       fileAction = `<div class="file-actions"><button class="button button-secondary" type="button" data-download-original="${safeText(m.id)}">Download original manuscript PDF</button><label class="file-label">Upload anonymized reviewer PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="blinded" data-manuscript-id="${safeText(m.id)}"></label></div>`;
       const rejected = m.status === 'rejected';
       fileAction += `<div class="file-actions"><button class="button button-secondary" type="button" data-delete-pdfs="original" data-manuscript-id="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete original PDF</button><button class="button button-secondary" type="button" data-delete-pdfs="blinded" data-manuscript-id="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete reviewer PDF</button><button class="button button-secondary" type="button" data-delete-manuscript="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete rejected manuscript</button></div><p class="form-note">${rejected ? 'You may delete either PDF separately, or permanently delete this rejected manuscript including its abstract, keywords, reviewer assignments and review history.' : 'Deletion controls become available after the manuscript status is changed to Rejected.'}</p>`;
-    } else if (currentProfile.role === 'reviewer') {
+    } if (hasRole('reviewer')) {
       fileAction = `<div class="file-actions"><button class="button button-secondary" type="button" data-download-blinded="${safeText(m.id)}">Download blinded PDF</button></div>`;
     }
     return `
@@ -138,8 +148,8 @@ function renderManuscripts() {
       <div class="manuscript-main">
         <h3>${safeText(m.title)}</h3>
         <div class="manuscript-meta">Article type: <strong>${safeText(m.article_type || 'Not specified')}</strong> · Received ${new Date(m.submitted_at).toLocaleDateString()} · Ref. ${safeText(m.id.slice(0,8).toUpperCase())}</div>
-        ${['admin','editor'].includes(currentProfile.role) ? `<div class="review-summary"><strong>Author contact details</strong><p>Email: <a href="mailto:${safeText(m.authorContact?.author_email || '')}">${safeText(m.authorContact?.author_email || 'Not available')}</a></p><p>WhatsApp: ${m.authorContact?.whatsapp_number ? `<a href="https://wa.me/${safeText(m.authorContact.whatsapp_number.replace(/\D/g, ''))}" target="_blank" rel="noopener noreferrer">${safeText(m.authorContact.whatsapp_number)}</a>` : 'Not provided'}</p></div>` : ''}
-        ${['admin','editor'].includes(currentProfile.role) ? (m.reviewerReview
+        ${(hasRole('admin') || hasRole('editor')) ? `<div class="review-summary"><strong>Author contact details</strong><p>Email: <a href="mailto:${safeText(m.authorContact?.author_email || '')}">${safeText(m.authorContact?.author_email || 'Not available')}</a></p><p>WhatsApp: ${m.authorContact?.whatsapp_number ? `<a href="https://wa.me/${safeText(m.authorContact.whatsapp_number.replace(/\D/g, ''))}" target="_blank" rel="noopener noreferrer">${safeText(m.authorContact.whatsapp_number)}</a>` : 'Not provided'}</p></div>` : ''}
+        ${(hasRole('admin') || hasRole('editor')) ? (m.reviewerReview
           ? `<div class="review-summary"><strong>Reviewer recommendation: ${safeText(({accept:'Accept',minor_revision:'Minor revision',major_revision:'Major revision',reject:'Reject'})[m.reviewerReview.recommendation] || m.reviewerReview.recommendation)}</strong><p>${safeText(m.reviewerReview.comments)}</p><small>Review received ${new Date(m.reviewerReview.submitted_at).toLocaleString()}</small></div>`
           : '<div class="review-summary"><strong>Reviewer recommendation: Not submitted yet</strong></div>') : ''}
         <details class="manuscript-details">
@@ -229,6 +239,21 @@ function populateEditorSelects() {
   const options = visibleManuscripts.map(m => ({id:m.id,title:m.title,label:manuscriptOptionLabel(m)}));
   setOptions($('status-manuscript'), options, 'Select manuscript');
   setOptions($('assign-manuscript'), options, 'Select manuscript');
+  populateReviewerDirectory();
+}
+
+async function populateReviewerDirectory() {
+  const { data: roleRows, error } = await db.from('user_roles').select('user_id').eq('role', 'reviewer');
+  if (error) throw error;
+  const ids = [...new Set((roleRows || []).map(row => row.user_id))];
+  if (!ids.length) {
+    setOptions($('reviewer-id'), [], 'No reviewers available yet');
+    return;
+  }
+  const { data: profiles, error: profileError } = await db.from('profiles').select('id, full_name').in('id', ids);
+  if (profileError) throw profileError;
+  const rows = (profiles || []).map(profile => ({ id: profile.id, label: profile.full_name || 'Reviewer account' }));
+  setOptions($('reviewer-id'), rows, 'Select a reviewer');
 }
 async function populateReviewerSelect() {
   const { data, error } = await db.from('reviewer_assignments')
@@ -239,6 +264,62 @@ async function populateReviewerSelect() {
     .map(m => ({...m, label:manuscriptOptionLabel(m)}));
   setOptions($('review-manuscript'), rows, 'Select an assignment');
 }
+
+
+$('user-search-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const email = $('user-search-email').value.trim();
+  const result = $('user-search-result');
+  result.textContent = 'Searching registered accounts...';
+  busy(true);
+  try {
+    const { data, error } = await db.functions.invoke('reviewer-user-management', {
+      body: { action: 'search', email }
+    });
+    if (error) throw error;
+    if (!data?.found) throw new Error(data?.error || 'No registered account was found.');
+    result.innerHTML = `
+      <div class="user-result-card">
+        <strong>${safeText(data.full_name)}</strong>
+        <span>${safeText(data.email)}</span>
+        <small>Current roles: ${safeText(data.roles.join(', '))}</small>
+        ${data.reviewer_enabled
+          ? '<span class="role-pill">REVIEWER ACCESS ALREADY ACTIVE</span>'
+          : '<button class="button button-secondary" type="button" data-grant-reviewer="true">Grant Reviewer Role</button>'}
+      </div>`;
+    result.dataset.userEmail = data.email;
+  } catch (err) {
+    result.textContent = err.message;
+    result.dataset.userEmail = '';
+  } finally { busy(false); }
+});
+
+$('user-search-result').addEventListener('click', async (event) => {
+  const button = event.target.closest('button[data-grant-reviewer]');
+  if (!button) return;
+  const email = $('user-search-result').dataset.userEmail;
+  if (!email) return alert('Search for a registered account first.');
+  if (!confirm(`Grant Reviewer access to ${email}? Their Author role will remain unchanged.`)) return;
+  busy(true);
+  try {
+    const { data, error } = await db.functions.invoke('reviewer-user-management', {
+      body: { action: 'grant_reviewer', email }
+    });
+    if (error) throw error;
+    if (!data?.success) throw new Error(data?.error || 'Reviewer role could not be granted.');
+    $('user-search-result').innerHTML = `
+      <div class="user-result-card">
+        <strong>${safeText(data.full_name)}</strong>
+        <span>${safeText(data.email)}</span>
+        <small>Roles: ${safeText(data.roles.join(', '))}</small>
+        <p>${safeText(data.message)}</p>
+      </div>`;
+    await populateReviewerDirectory();
+    alert('Reviewer access granted. The existing Author role and account history are preserved.');
+  } catch (err) {
+    alert(`Could not grant Reviewer access: ${err.message}`);
+  } finally { busy(false); }
+});
 
 for (const tab of document.querySelectorAll('[data-auth-tab]')) tab.addEventListener('click', () => switchAuthTab(tab.dataset.authTab));
 
