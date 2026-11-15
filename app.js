@@ -120,6 +120,9 @@ function renderManuscripts() {
       fileAction = `<div class="file-actions"><label class="file-label">Upload or add original PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="original" data-manuscript-id="${safeText(m.id)}"></label></div>`;
     } else if (['admin','editor'].includes(currentProfile.role)) {
       fileAction = `<div class="file-actions"><label class="file-label">Upload anonymized reviewer PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="blinded" data-manuscript-id="${safeText(m.id)}"></label></div>`;
+      if (m.status === 'rejected') {
+        fileAction += `<div class="file-actions"><button class="button button-secondary" type="button" data-delete-pdfs="original" data-manuscript-id="${safeText(m.id)}">Delete original PDF</button><button class="button button-secondary" type="button" data-delete-pdfs="blinded" data-manuscript-id="${safeText(m.id)}">Delete reviewer PDF</button></div><p class="form-note">These permanent file deletion controls are available only for rejected manuscripts. The abstract and review history are retained.</p>`;
+      }
     } else if (currentProfile.role === 'reviewer') {
       fileAction = `<div class="file-actions"><button class="button button-secondary" type="button" data-download-blinded="${safeText(m.id)}">Download blinded PDF</button></div>`;
     }
@@ -408,6 +411,29 @@ $('manuscript-list').addEventListener('change', async (event) => {
 });
 
 $('manuscript-list').addEventListener('click', async (event) => {
+  const deleteButton = event.target.closest('button[data-delete-pdfs]');
+  if (deleteButton) {
+    const manuscriptId = deleteButton.dataset.manuscriptId;
+    const kind = deleteButton.dataset.deletePdfs;
+    const label = kind === 'original' ? 'original manuscript PDF' : 'blinded reviewer PDF';
+    if (!confirm(`Permanently delete the ${label} for this rejected manuscript? This cannot be undone.`)) return;
+    busy(true);
+    try {
+      const folder = `${kind}/${manuscriptId}`;
+      const { data: files, error: listError } = await db.storage.from(STORAGE_BUCKET).list(folder, { limit: 100 });
+      if (listError) throw listError;
+      const paths = (files || []).filter(f => f.name && f.name.toLowerCase().endsWith('.pdf')).map(f => `${folder}/${f.name}`);
+      if (!paths.length) throw new Error('No PDF files were found in this folder.');
+      const { error } = await db.storage.from(STORAGE_BUCKET).remove(paths);
+      if (error) throw error;
+      alert(`${label} deleted successfully. The manuscript record, abstract and review history have been retained.`);
+    } catch (err) {
+      console.error('PDF deletion failed:', err);
+      alert(`PDF deletion failed: ${err.message}`);
+    } finally { busy(false); }
+    return;
+  }
+
   const button = event.target.closest('button[data-download-blinded]');
   if (!button) return;
   busy(true);
