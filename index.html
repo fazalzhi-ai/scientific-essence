@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=4">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="app.js?v=15"></script>
+  <script defer src="app.js?v=16"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -81,11 +81,15 @@
                 <ul><li>Number tables and figures consecutively.</li><li>Provide a clear title or caption for each table and figure.</li><li>Refer to each table or figure in the manuscript text.</li><li>Ensure images and diagrams are clear and readable.</li><li>Identify reproduced material and obtain permission where required.</li></ul>
                 <h3>5. References</h3>
                 <ul><li>Include references for all cited sources.</li><li>Use a consistent referencing style throughout the manuscript.</li><li>Ensure every in text citation has a corresponding reference entry.</li></ul>
-                <h3>6. Final PDF checklist</h3>
+                <h3>6. Author contact information</h3>
+                <p>Provide a valid email address in your registered account. An optional WhatsApp number may be provided in the submission form to help the editorial office contact you about your manuscript. Contact details are confidential and used only for journal administration and editorial communication. They are not shared with peer reviewers or published.</p>
+                <h3>7. Final PDF checklist</h3>
                 <ul><li>Check spelling, grammar, heading sequence and numbering.</li><li>Verify tables, figures and references.</li><li>Confirm that no pages or content are missing.</li><li>Confirm that the final PDF is no larger than 10 MB.</li></ul>
               </div>
             </details>
             <form id="submission-form" class="stack-form">
+              <label>WhatsApp number <small>(optional, include country code, for example +91 9876543210)</small><input id="author-whatsapp" type="tel" inputmode="tel" maxlength="20" placeholder="+91 9876543210" autocomplete="tel"></label>
+              <p class="form-note">Your registered email address will be used for official editorial communication. Your email and WhatsApp number are visible only to authorized editors and administrators, not reviewers.</p>
               <label>Manuscript title<input id="manuscript-title" required minlength="5" maxlength="300" placeholder="Enter the full title"></label>
               <label>Abstract<textarea id="manuscript-abstract" required minlength="50" maxlength="10000" rows="5" placeholder="Provide a structured or unstructured abstract"></textarea></label>
               <label>Keywords <small>(separate with commas)</small><input id="manuscript-keywords" placeholder="radiology, imaging, medical science"></label>
