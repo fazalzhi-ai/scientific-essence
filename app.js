@@ -86,6 +86,14 @@ async function refreshData() {
   visibleManuscripts = data || [];
 
   if (['admin','editor'].includes(currentProfile.role)) {
+    const { data: contacts, error: contactError } = await db.from('manuscript_contacts')
+      .select('manuscript_id, author_email, whatsapp_number');
+    if (contactError) throw contactError;
+    const contactsByManuscript = new Map((contacts || []).map(contact => [contact.manuscript_id, contact]));
+    visibleManuscripts = visibleManuscripts.map(m => ({
+      ...m,
+      authorContact: contactsByManuscript.get(m.id) || null
+    }));
     const { data: reviews, error: reviewError } = await db.from('reviews')
       .select('manuscript_id, recommendation, comments, submitted_at')
       .order('submitted_at', { ascending: false });
@@ -130,6 +138,7 @@ function renderManuscripts() {
       <div class="manuscript-main">
         <h3>${safeText(m.title)}</h3>
         <div class="manuscript-meta">Received ${new Date(m.submitted_at).toLocaleDateString()} · Ref. ${safeText(m.id.slice(0,8).toUpperCase())}</div>
+        ${['admin','editor'].includes(currentProfile.role) ? `<div class="review-summary"><strong>Author contact details</strong><p>Email: <a href="mailto:${safeText(m.authorContact?.author_email || '')}">${safeText(m.authorContact?.author_email || 'Not available')}</a></p><p>WhatsApp: ${m.authorContact?.whatsapp_number ? `<a href="https://wa.me/${safeText(m.authorContact.whatsapp_number.replace(/\\D/g, ''))}" target="_blank" rel="noopener noreferrer">${safeText(m.authorContact.whatsapp_number)}</a>` : 'Not provided'}</p></div>` : ''}
         ${['admin','editor'].includes(currentProfile.role) ? (m.reviewerReview
           ? `<div class="review-summary"><strong>Reviewer recommendation: ${safeText(({accept:'Accept',minor_revision:'Minor revision',major_revision:'Major revision',reject:'Reject'})[m.reviewerReview.recommendation] || m.reviewerReview.recommendation)}</strong><p>${safeText(m.reviewerReview.comments)}</p><small>Review received ${new Date(m.reviewerReview.submitted_at).toLocaleString()}</small></div>`
           : '<div class="review-summary"><strong>Reviewer recommendation: Not submitted yet</strong></div>') : ''}
@@ -319,10 +328,26 @@ $('submission-form').addEventListener('submit', async (event) => {
   const title = $('manuscript-title').value.trim();
   const abstract = $('manuscript-abstract').value.trim();
   const keywords = $('manuscript-keywords').value.split(',').map(x => x.trim()).filter(Boolean).slice(0,15);
+  const whatsapp = $('author-whatsapp').value.trim();
+  const whatsappDigits = whatsapp.replace(/\\D/g, '');
+  if (whatsapp && (whatsappDigits.length < 7 || whatsappDigits.length > 15)) {
+    busy(false);
+    return alert('Enter a valid WhatsApp number with country code, or leave this optional field blank.');
+  }
   const { data: manuscript, error } = await db.from('manuscripts')
     .insert({ author_id: currentUser.id, title, abstract, keywords, status: 'submitted' })
     .select('id').single();
   if (error) { busy(false); return alert(`Submission could not be saved: ${error.message}`); }
+  const { error: contactError } = await db.from('manuscript_contacts').insert({
+    manuscript_id: manuscript.id,
+    author_id: currentUser.id,
+    author_email: currentUser.email,
+    whatsapp_number: whatsapp || null
+  });
+  if (contactError) {
+    busy(false);
+    return alert(`The manuscript record was created, but author contact details could not be saved: ${contactError.message}. Please contact the editorial office and provide reference ${manuscript.id.slice(0,8).toUpperCase()}.`);
+  }
   try {
     await uploadManuscriptPdf(file, manuscript.id, 'original');
     $('submission-form').reset();
