@@ -12,6 +12,7 @@ const $ = (id) => document.getElementById(id);
 let currentUser = null;
 let currentProfile = null;
 let visibleManuscripts = [];
+let assignedReviewerManuscriptIds = new Set();
 const STORAGE_BUCKET = 'scientific-essence-manuscripts';
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
@@ -134,7 +135,7 @@ function renderManuscripts() {
   }
   list.innerHTML = visibleManuscripts.map(m => {
     let fileAction = '';
-    if (hasRole('author')) {
+    if (hasRole('author') && m.author_id === currentUser.id) {
       fileAction += `<div class="file-actions"><label class="file-label">Upload or add original PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="original" data-manuscript-id="${safeText(m.id)}"></label></div>`;
     }
     if (hasRole('admin') || hasRole('editor')) {
@@ -142,7 +143,7 @@ function renderManuscripts() {
       const rejected = m.status === 'rejected';
       fileAction += `<div class="file-actions"><button class="button button-secondary" type="button" data-delete-pdfs="original" data-manuscript-id="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete original PDF</button><button class="button button-secondary" type="button" data-delete-pdfs="blinded" data-manuscript-id="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete reviewer PDF</button><button class="button button-secondary" type="button" data-delete-manuscript="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete rejected manuscript</button></div><p class="form-note">${rejected ? 'You may delete either PDF separately, or permanently delete this rejected manuscript including its abstract, keywords, reviewer assignments and review history.' : 'Deletion controls become available after the manuscript status is changed to Rejected.'}</p>`;
     }
-    if (hasRole('reviewer')) {
+    if (hasRole('reviewer') && assignedReviewerManuscriptIds.has(m.id)) {
       fileAction += `<div class="file-actions"><button class="button button-secondary" type="button" data-download-blinded="${safeText(m.id)}">Download blinded PDF</button></div>`;
     }
     return `
@@ -262,6 +263,7 @@ async function populateReviewerSelect() {
     .select('manuscript_id, manuscripts(id,title,submitted_at)')
     .eq('reviewer_id', currentUser.id);
   if (error) throw error;
+  assignedReviewerManuscriptIds = new Set((data || []).map(x => x.manuscript_id));
   const rows = (data || []).map(x => x.manuscripts).filter(Boolean)
     .map(m => ({...m, label:manuscriptOptionLabel(m)}));
   setOptions($('review-manuscript'), rows, 'Select an assignment');
