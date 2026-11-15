@@ -135,13 +135,15 @@ function renderManuscripts() {
   list.innerHTML = visibleManuscripts.map(m => {
     let fileAction = '';
     if (hasRole('author')) {
-      fileAction = `<div class="file-actions"><label class="file-label">Upload or add original PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="original" data-manuscript-id="${safeText(m.id)}"></label></div>`;
-    } else if ((hasRole('admin') || hasRole('editor'))) {
-      fileAction = `<div class="file-actions"><button class="button button-secondary" type="button" data-download-original="${safeText(m.id)}">Download original manuscript PDF</button><label class="file-label">Upload anonymized reviewer PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="blinded" data-manuscript-id="${safeText(m.id)}"></label></div>`;
+      fileAction += `<div class="file-actions"><label class="file-label">Upload or add original PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="original" data-manuscript-id="${safeText(m.id)}"></label></div>`;
+    }
+    if (hasRole('admin') || hasRole('editor')) {
+      fileAction += `<div class="file-actions"><button class="button button-secondary" type="button" data-download-original="${safeText(m.id)}">Download original manuscript PDF</button><label class="file-label">Upload anonymized reviewer PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="blinded" data-manuscript-id="${safeText(m.id)}"></label></div>`;
       const rejected = m.status === 'rejected';
       fileAction += `<div class="file-actions"><button class="button button-secondary" type="button" data-delete-pdfs="original" data-manuscript-id="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete original PDF</button><button class="button button-secondary" type="button" data-delete-pdfs="blinded" data-manuscript-id="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete reviewer PDF</button><button class="button button-secondary" type="button" data-delete-manuscript="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete rejected manuscript</button></div><p class="form-note">${rejected ? 'You may delete either PDF separately, or permanently delete this rejected manuscript including its abstract, keywords, reviewer assignments and review history.' : 'Deletion controls become available after the manuscript status is changed to Rejected.'}</p>`;
-    } if (hasRole('reviewer')) {
-      fileAction = `<div class="file-actions"><button class="button button-secondary" type="button" data-download-blinded="${safeText(m.id)}">Download blinded PDF</button></div>`;
+    }
+    if (hasRole('reviewer')) {
+      fileAction += `<div class="file-actions"><button class="button button-secondary" type="button" data-download-blinded="${safeText(m.id)}">Download blinded PDF</button></div>`;
     }
     return `
     <article class="manuscript-item">
