@@ -19,3 +19,9 @@
 .heading-example{background:#e5f0f6!important;border:1px solid #b8d3e2!important}
 .heading-example strong{color:#123b56!important;font-size:13px!important}
 .heading-example span{color:#36596e!important;font-size:11px!important}
+
+
+/* High contrast black text for manuscript guidelines */
+.author-guidelines>summary{color:#000000!important;background:#e8f1f7!important}
+.author-guidelines,.guideline-content,.guideline-content p,.guideline-content li,.guideline-intro,.guideline-content h3,.heading-example strong,.heading-example span{color:#000000!important}
+.heading-example{color:#000000!important}
