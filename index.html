@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=4">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="app.js?v=11"></script>
+  <script defer src="app.js?v=12"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -66,11 +66,31 @@
         <div class="dashboard-grid">
           <section id="submission-panel" class="panel">
             <div class="panel-heading"><div><p class="eyebrow">AUTHOR SERVICES</p><h2>Submit a manuscript</h2></div><span class="panel-icon">＋</span></div>
+            <details class="author-guidelines">
+              <summary>Before You Submit Your Manuscript</summary>
+              <div class="guideline-content">
+                <p class="guideline-intro">Please use the following instructions to prepare a clear, consistent and professionally presented manuscript. Scientific content and research structure may be appropriate to your discipline.</p>
+                <h3>1. File requirements</h3>
+                <ul><li>Submit the manuscript in PDF format only.</li><li>Maximum file size: 10 MB.</li><li>Ensure the PDF is readable, complete and properly formatted.</li><li>Use clear text and avoid blurred images or scanned pages wherever possible.</li></ul>
+                <h3>2. Page formatting</h3>
+                <ul><li>Paper size: A4.</li><li>Font: Times New Roman or Arial.</li><li>Main text: 12 point.</li><li>Main headings: 14 point, bold.</li><li>Subheadings: 12 point, bold.</li><li>Line spacing: 1.5.</li><li>Text alignment: justified.</li><li>Maintain consistent margins and paragraph spacing.</li></ul>
+                <h3>3. Headings and subheadings</h3>
+                <p>Use a clear and consistent hierarchy. Number headings and subheadings in sequence. Keep headings concise and meaningful. Use bold formatting to distinguish headings, and avoid excessive colors, decorative fonts or unnecessary highlighting.</p>
+                <div class="heading-example"><strong>1. INTRODUCTION</strong><span>Main heading, bold and uppercase</span><strong>1.1 Background of the Study</strong><span>First level subheading</span><strong>1.2 Objectives of the Study</strong><span>First level subheading</span><strong>1.2.1 Specific Objectives</strong><span>Second level subheading</span><strong>2. MATERIALS AND METHODS</strong><strong>2.1 Study Design</strong><strong>2.2 Data Collection</strong></div>
+                <h3>4. Tables, figures and images</h3>
+                <ul><li>Number tables and figures consecutively.</li><li>Provide a clear title or caption for each table and figure.</li><li>Refer to each table or figure in the manuscript text.</li><li>Ensure images and diagrams are clear and readable.</li><li>Identify reproduced material and obtain permission where required.</li></ul>
+                <h3>5. References</h3>
+                <ul><li>Include references for all cited sources.</li><li>Use a consistent referencing style throughout the manuscript.</li><li>Ensure every in text citation has a corresponding reference entry.</li></ul>
+                <h3>6. Final PDF checklist</h3>
+                <ul><li>Check spelling, grammar, heading sequence and numbering.</li><li>Verify tables, figures and references.</li><li>Confirm that no pages or content are missing.</li><li>Confirm that the final PDF is no larger than 10 MB.</li></ul>
+              </div>
+            </details>
             <form id="submission-form" class="stack-form">
               <label>Manuscript title<input id="manuscript-title" required minlength="5" maxlength="300" placeholder="Enter the full title"></label>
               <label>Abstract<textarea id="manuscript-abstract" required minlength="50" maxlength="10000" rows="5" placeholder="Provide a structured or unstructured abstract"></textarea></label>
               <label>Keywords <small>(separate with commas)</small><input id="manuscript-keywords" placeholder="radiology, imaging, medical science"></label>
               <label>Original manuscript PDF <small>(PDF only, maximum 10 MB)</small><input id="manuscript-file" type="file" accept="application/pdf,.pdf" required></label>
+              <label class="author-declaration"><input id="author-guidelines-confirm" type="checkbox" required><span>I have read and followed the manuscript preparation guidelines.</span></label>
               <button class="button button-primary" type="submit">Submit manuscript <span>→</span></button>
               <p class="form-note">Upload the original manuscript as a PDF. Do not include a blinded reviewer copy here.</p>
             </form>
