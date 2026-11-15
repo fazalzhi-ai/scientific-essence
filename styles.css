@@ -25,3 +25,5 @@
 .author-guidelines>summary{color:#000000!important;background:#e8f1f7!important}
 .author-guidelines,.guideline-content,.guideline-content p,.guideline-content li,.guideline-intro,.guideline-content h3,.heading-example strong,.heading-example span{color:#000000!important}
 .heading-example{color:#000000!important}
+
+.user-search-result{margin-top:12px}.user-result-card{display:grid;gap:8px;padding:14px;border:1px solid var(--line);border-radius:11px;background:#f8fbfb}.user-result-card strong{color:var(--navy);font-size:14px}.user-result-card span,.user-result-card small{color:var(--muted);font-size:11px;overflow-wrap:anywhere}.user-result-card p{margin:0;color:var(--teal-dark);font-size:11px}.user-result-card .role-pill{justify-self:start;font-size:9px}
