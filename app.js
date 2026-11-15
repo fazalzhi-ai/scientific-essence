@@ -119,7 +119,7 @@ function renderManuscripts() {
     if (currentProfile.role === 'author') {
       fileAction = `<div class="file-actions"><label class="file-label">Upload or add original PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="original" data-manuscript-id="${safeText(m.id)}"></label></div>`;
     } else if (['admin','editor'].includes(currentProfile.role)) {
-      fileAction = `<div class="file-actions"><label class="file-label">Upload anonymized reviewer PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="blinded" data-manuscript-id="${safeText(m.id)}"></label></div>`;
+      fileAction = `<div class="file-actions"><button class="button button-secondary" type="button" data-download-original="${safeText(m.id)}">Download original manuscript PDF</button><label class="file-label">Upload anonymized reviewer PDF<input type="file" accept="application/pdf,.pdf" data-upload-kind="blinded" data-manuscript-id="${safeText(m.id)}"></label></div>`;
       const rejected = m.status === 'rejected';
       fileAction += `<div class="file-actions"><button class="button button-secondary" type="button" data-delete-pdfs="original" data-manuscript-id="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete original PDF</button><button class="button button-secondary" type="button" data-delete-pdfs="blinded" data-manuscript-id="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete reviewer PDF</button><button class="button button-secondary" type="button" data-delete-manuscript="${safeText(m.id)}" ${rejected ? '' : 'disabled'}>Delete rejected manuscript</button></div><p class="form-note">${rejected ? 'You may delete either PDF separately, or permanently delete this rejected manuscript including its abstract, keywords, reviewer assignments and review history.' : 'Deletion controls become available after the manuscript status is changed to Rejected.'}</p>`;
     } else if (currentProfile.role === 'reviewer') {
@@ -165,6 +165,27 @@ async function uploadManuscriptPdf(file, manuscriptId, kind) {
   });
   if (error) throw error;
   return path;
+}
+
+async function downloadOriginalPdf(manuscriptId) {
+  const folder = `original/${manuscriptId}`;
+  const { data: files, error: listError } = await db.storage.from(STORAGE_BUCKET).list(folder, {
+    limit: 100,
+    sortBy: { column: 'name', order: 'desc' }
+  });
+  if (listError) throw listError;
+  const pdfs = (files || []).filter(f => f.name && f.name.toLowerCase().endsWith('.pdf'));
+  if (!pdfs.length) throw new Error('No original manuscript PDF was found. The author may need to upload it again.');
+  const { data, error } = await db.storage.from(STORAGE_BUCKET).download(`${folder}/${pdfs[0].name}`);
+  if (error) throw error;
+  const url = URL.createObjectURL(data);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = pdfs[0].name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 async function downloadBlindedPdf(manuscriptId) {
@@ -483,6 +504,15 @@ $('manuscript-list').addEventListener('click', async (event) => {
       console.error('PDF deletion failed:', err);
       alert(`PDF deletion failed: ${err.message}`);
     } finally { busy(false); }
+    return;
+  }
+
+  const originalButton = event.target.closest('button[data-download-original]');
+  if (originalButton) {
+    busy(true);
+    try { await downloadOriginalPdf(originalButton.dataset.downloadOriginal); }
+    catch (err) { alert(err.message); }
+    finally { busy(false); }
     return;
   }
 
