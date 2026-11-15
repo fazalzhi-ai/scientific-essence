@@ -1,5 +1,36 @@
 -- Scientific ESSENCE Editorial Portal
 -- The profiles table and auth.users profile trigger were created separately.
+
+-- Multi role support. The profiles.role column remains the primary role for
+-- backward compatibility. Additional permissions are stored independently.
+create table if not exists public.user_roles (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  role text not null check (role in ('author','reviewer','editor','admin')),
+  assigned_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, role)
+);
+
+alter table public.user_roles enable row level security;
+grant select on public.user_roles to authenticated;
+
+create or replace function public.has_role(_user_id uuid, _role text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $
+  select exists (
+    select 1 from public.user_roles ur
+    where ur.user_id = _user_id and ur.role = _role
+  )
+  or exists (
+    select 1 from public.profiles p
+    where p.id = _user_id and p.role = _role
+  );
+$;
+
 -- This script documents the additional manuscript workflow schema already applied.
 
 create table if not exists public.manuscripts (
