@@ -307,12 +307,14 @@ $('submission-form').addEventListener('submit', async (event) => {
     $('submission-form').reset();
     await refreshData();
     let emailNotice = '';
-    const { error: emailError } = await db.functions.invoke('author-submission-confirmation', {
+    const { data: emailData, error: emailError } = await db.functions.invoke('author-submission-confirmation', {
       body: { manuscript_id: manuscript.id }
     });
     if (emailError) {
       console.error('Submission confirmation email failed:', emailError);
       emailNotice = '\n\nYour submission was received, but the confirmation email could not be sent. Please contact the editorial office.';
+    } else if (emailData && emailData.editor_notification_sent === false) {
+      emailNotice = '\n\nYour confirmation email was sent, but the editorial office notification could not be delivered. Please contact the journal administrator.';
     }
     alert('Manuscript details and original PDF submitted successfully.' + emailNotice);
   } catch (uploadError) {
