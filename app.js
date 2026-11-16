@@ -123,7 +123,7 @@ async function refreshData() {
   $('stat-total').textContent = visibleManuscripts.length;
   $('stat-pending').textContent = visibleManuscripts.filter(m => ['submitted','under_review','revision_requested'].includes(m.status)).length;
   $('stat-accepted').textContent = visibleManuscripts.filter(m => m.status === 'accepted').length;
-  if ((hasRole('admin') || hasRole('editor'))) populateEditorSelects();
+  if ((hasRole('admin') || hasRole('editor'))) await populateEditorSelects();
   if (hasRole('reviewer')) await populateReviewerSelect();
 }
 
@@ -238,25 +238,42 @@ function manuscriptOptionLabel(m) {
   const ref = m.id ? m.id.slice(0,8).toUpperCase() : '';
   return `${m.title}${ref ? ' | Ref. ' + ref : ''}${date ? ' | ' + date : ''}`;
 }
-function populateEditorSelects() {
+async function populateEditorSelects() {
   const options = visibleManuscripts.map(m => ({id:m.id,title:m.title,label:manuscriptOptionLabel(m)}));
   setOptions($('status-manuscript'), options, 'Select manuscript');
   setOptions($('assign-manuscript'), options, 'Select manuscript');
-  populateReviewerDirectory();
+  await populateReviewerDirectory();
 }
 
 async function populateReviewerDirectory() {
-  const { data: roleRows, error } = await db.from('user_roles').select('user_id').eq('role', 'reviewer');
-  if (error) throw error;
-  const ids = [...new Set((roleRows || []).map(row => row.user_id))];
-  if (!ids.length) {
-    setOptions($('reviewer-id'), [], 'No reviewers available yet');
-    return;
+  const select = $('reviewer-id');
+  const status = $('assign-form').querySelector('.form-note');
+  select.disabled = true;
+  setOptions(select, [], 'Loading approved reviewers...');
+  if (status) status.textContent = 'Loading the approved reviewer directory...';
+  try {
+    const { data: roleRows, error } = await db.from('user_roles').select('user_id').eq('role', 'reviewer');
+    if (error) throw error;
+    const ids = [...new Set((roleRows || []).map(row => row.user_id))];
+    if (!ids.length) {
+      setOptions(select, [], 'No reviewers available yet');
+      if (status) status.textContent = 'No accounts currently have the Reviewer role.';
+      return;
+    }
+    const { data: profiles, error: profileError } = await db.from('profiles').select('id, full_name').in('id', ids);
+    if (profileError) throw profileError;
+    const rows = (profiles || []).map(profile => ({ id: profile.id, label: profile.full_name || 'Reviewer account' }));
+    setOptions(select, rows, rows.length ? 'Select a reviewer' : 'Reviewer profiles unavailable');
+    if (status) status.textContent = rows.length
+      ? `${rows.length} approved reviewer account(s) loaded. Select the manuscript and reviewer to create an assignment.`
+      : 'Reviewer roles were found, but matching profiles could not be loaded.';
+  } catch (err) {
+    console.error('Reviewer directory loading failed:', err);
+    setOptions(select, [], 'Reviewer directory could not load');
+    if (status) status.textContent = `Reviewer list could not be loaded: ${err.message}. Refresh the dashboard or contact the journal administrator.`;
+  } finally {
+    select.disabled = false;
   }
-  const { data: profiles, error: profileError } = await db.from('profiles').select('id, full_name').in('id', ids);
-  if (profileError) throw profileError;
-  const rows = (profiles || []).map(profile => ({ id: profile.id, label: profile.full_name || 'Reviewer account' }));
-  setOptions($('reviewer-id'), rows, 'Select a reviewer');
 }
 async function populateReviewerSelect() {
   const { data, error } = await db.from('reviewer_assignments')
