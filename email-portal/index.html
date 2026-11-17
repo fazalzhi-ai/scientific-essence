@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#071a32">
+<title>Radiology Essence | Email Portal</title>
+<meta name="description" content="Radiology Essence official email portal, securely powered by Zoho Mail.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--navy:#071a32;--blue:#0d3157;--cyan:#55d5e8;--white:#f5fbff;--muted:#a9bfd0;--line:rgba(185,222,244,.18)}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 18% 18%,#17466b 0,transparent 36%),radial-gradient(ellipse at 82% 75%,#123b58 0,transparent 38%),linear-gradient(135deg,#061426,#0a2039 58%,#061426);font-family:'DM Sans',sans-serif;color:var(--white);overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.15;background-image:linear-gradient(rgba(150,210,240,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(150,210,240,.13) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(to bottom,black,transparent 85%)}
+.shell{max-width:1240px;margin:auto;padding:28px 5vw 24px;position:relative;z-index:1}.top{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:22px}.brand{display:flex;align-items:center;gap:13px}.mark{width:48px;height:48px;border:1px solid rgba(85,213,232,.6);border-radius:15px;display:grid;place-items:center;color:var(--cyan);font:800 17px Manrope,sans-serif;box-shadow:0 0 28px rgba(85,213,232,.12)}.brand strong{display:block;font:800 17px Manrope,sans-serif;letter-spacing:.4px}.brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px}.secure{font-size:11px;color:#b9d6e8;display:flex;align-items:center;gap:8px}.secure i{width:7px;height:7px;border-radius:50%;background:#53d6a2;box-shadow:0 0 12px #53d6a2}
+main{display:grid;grid-template-columns:1.1fr .78fr;gap:7%;align-items:center;padding:64px 0 52px}.eyebrow{font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--cyan);font-weight:700}.intro h1{font:800 clamp(38px,5vw,66px)/1.08 Manrope,sans-serif;letter-spacing:-2.5px;margin:17px 0 20px}.intro h1 span{color:var(--cyan)}.intro p{color:#b4c9d9;font-size:15px;max-width:490px;line-height:1.8}.visual{height:260px;max-width:500px;margin-top:38px;position:relative;border:1px solid var(--line);border-radius:24px;background:linear-gradient(135deg,rgba(28,81,119,.45),rgba(7,26,50,.2));overflow:hidden;display:flex;align-items:center;justify-content:center}.scan{position:absolute;width:165px;height:220px;border:1px solid rgba(106,211,232,.38);border-radius:48% 48% 14px 14px;left:16%;top:24px;transform:rotate(-8deg);box-shadow:inset 0 0 40px rgba(74,194,222,.12),0 0 38px rgba(74,194,222,.08)}.scan:before{content:"";position:absolute;inset:15px 24px 18px;border-radius:48%;background:radial-gradient(ellipse at 50% 34%,rgba(214,247,255,.32),transparent 34%),radial-gradient(ellipse at 50% 65%,rgba(115,203,228,.2),transparent 48%);filter:blur(2px)}.scan.two{left:auto;right:16%;transform:rotate(8deg);opacity:.6}.crosshair{position:absolute;width:90px;height:90px;border:1px solid rgba(85,213,232,.48);border-radius:50%;display:grid;place-items:center;color:var(--cyan);font-size:29px;background:rgba(4,22,41,.62);box-shadow:0 0 55px rgba(85,213,232,.18)}.visual-label{position:absolute;bottom:16px;left:20px;font-size:9px;letter-spacing:2px;color:#9dc5d8;text-transform:uppercase}
+.card{background:rgba(8,28,49,.86);border:1px solid rgba(152,213,239,.25);border-radius:22px;padding:32px;box-shadow:0 25px 80px rgba(0,0,0,.32);backdrop-filter:blur(18px)}.card-icon{width:46px;height:46px;border-radius:14px;background:rgba(85,213,232,.12);display:grid;place-items:center;color:var(--cyan);font-size:21px}.card h2{font:700 24px Manrope,sans-serif;margin:20px 0 6px}.sub{color:var(--muted);font-size:12px;margin:0 0 25px}.field-label{display:block;font-size:11px;color:#d1e4ef;margin-bottom:8px}.field{width:100%;border:1px solid rgba(165,211,235,.28);border-radius:10px;background:rgba(1,13,27,.58);padding:14px 13px;color:white;font:14px 'DM Sans';outline:none}.field:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(85,213,232,.1)}.btn{width:100%;border:0;border-radius:10px;margin-top:15px;padding:14px;background:linear-gradient(100deg,#28a9c7,#54d5e5);color:#042035;font:700 13px Manrope;cursor:pointer;transition:transform .2s,filter .2s}.btn:hover{transform:translateY(-2px);filter:brightness(1.08)}.secure-note{display:flex;gap:9px;margin-top:18px;color:#9bb7c9;font-size:10px;line-height:1.6}.secure-note b{color:#d8f2fa}.divider{height:1px;background:var(--line);margin:23px 0 18px}.alt{font-size:11px;color:var(--muted);text-align:center}.alt a{color:var(--cyan);text-decoration:none}.footer{display:flex;justify-content:space-between;gap:20px;border-top:1px solid var(--line);padding-top:19px;color:#809caf;font-size:10px}.footer strong{color:#c6dce8;font-weight:600}
+@media(max-width:820px){main{grid-template-columns:1fr;gap:30px;padding:42px 0}.intro h1{font-size:45px}.visual{height:190px;margin-top:25px}.card{max-width:520px;width:100%;margin:auto}.secure{display:none}.footer{flex-direction:column;gap:6px}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header class="top">
+  <div class="brand"><div class="mark">RE</div><div><strong>RADIOLOGY ESSENCE</strong><small>Knowledge • Imaging • Research</small></div></div>
+  <div class="secure"><i></i> Secure email access</div>
+</header>
+<main>
+  <section class="intro">
+    <div class="eyebrow">Official communication portal</div>
+    <h1>Your work.<br><span>Your identity.</span><br>Your inbox.</h1>
+    <p>Access your official Radiology Essence mailbox through a dedicated workspace designed for our academic, research and editorial community.</p>
+    <div class="visual" aria-label="Abstract radiology inspired visual">
+      <div class="scan"></div><div class="scan two"></div><div class="crosshair">✚</div>
+      <div class="visual-label">Radiology Essence • Secure workspace</div>
+    </div>
+  </section>
+  <section class="card">
+    <div class="card-icon">✉</div>
+    <h2>Sign in to your mailbox</h2>
+    <p class="sub">Continue to the official Zoho Mail sign in.</p>
+    <form id="loginForm">
+      <label class="field-label" for="email">Official email address</label>
+      <input class="field" id="email" type="email" autocomplete="username" placeholder="name@radiologyessence.com" required>
+      <button class="btn" type="submit">Continue securely to Zoho Mail <span aria-hidden="true">↗</span></button>
+    </form>
+    <div class="secure-note"><span>🔒</span><span><b>Your password is entered only on Zoho.</b> This portal never collects or stores your mailbox password.</span></div>
+    <div class="divider"></div>
+    <div class="alt">Email service securely powered by <a href="https://www.zoho.com/mail/" target="_blank" rel="noopener">Zoho Mail</a></div>
+  </section>
+</main>
+<footer class="footer"><span>© <span id="year"></span> <strong>Radiology Essence</strong>. All rights reserved.</span><span>Official email access • Zoho Mail India</span></footer>
+</div>
+<script>
+document.getElementById('year').textContent=new Date().getFullYear();
+document.getElementById('loginForm').addEventListener('submit',function(event){
+  event.preventDefault();
+  const email=document.getElementById('email').value.trim();
+  if(!email)return;
+  sessionStorage.setItem('re_zoho_login_hint',email);
+  window.location.href='https://mail.zoho.in/';
+});
+</script>
+</body>
+</html>
